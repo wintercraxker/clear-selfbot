@@ -1,0 +1,27 @@
+{
+  "name": "satori",
+  "version": "1.0.0",
+  "description": "clear selfbot by zspoofing",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mimifunk/Satori-ClearSeflbot.git"
+  },
+  "author": "zSpoofing",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Mimifunk/Satori-ClearSeflbot/issues"
+  },
+  "homepage": "https://github.com/Mimifunk/Satori-ClearSeflbot#readme",
+  "keywords": [],
+  "dependencies": {
+    "colors": "^1.4.0",
+    "discord-rpc": "^4.0.1",
+    "discord.js-selfbot-v13": "^3.1.4",
+    "path": "^0.12.7",
+    "request": "^2.88.2"
+  }
+}
