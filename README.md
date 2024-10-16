@@ -9,8 +9,8 @@
     <img src="https://img.shields.io/badge/Node.js-v14.17.5-brightgreen">
     <img src="https://img.shields.io/badge/Language-JavaScript-yellow"
   </a>
-  <a href="https://github.com/23Savagee/SatoriClear-Selfbot/">
-    <img src="https://visitor-badge.laobi.icu/badge?page_id=23Savagee.SatoriClear-Selfbot" /></a>
+  <a href="https://github.com/wintercraxker/clear-selfbot/">
+    <img src="https://visitor-badge.laobi.icu/badge?page_id=Wintercraxker.clear-selfbot" /></a>
     
   </a> 
 
