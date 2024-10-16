@@ -1,5 +1,6 @@
 <p align="center">
-  <img src="https://m.media-amazon.com/images/I/61Z-SbadxlL._AC_UF894,1000_QL80_.jpg">
+  <img src="https://m.media-amazon.com/images/I/61Z-SbadxlL._AC_UF894,1000_QL80_.jpg" 
+       style="width: 500px; height: auto;">
 </p>
 
 <p align="center">
