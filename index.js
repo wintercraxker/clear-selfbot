@@ -9,6 +9,7 @@ const {
     Client
 } = require('discord.js-selfbot-v13')
 const rpc = require('discord-rpc')
+const readline = require('readline');
 
 const client = new Client(),
     rpcClient = new rpc.Client({
@@ -26,7 +27,6 @@ client.on("warn", () => {})
 
 function printClear() {
     console.log(`
-
                                              github.com/Wintercraxker
 
       ██████  ▄▄▄     ▄▄▄█████▓ ▒█████   ██▀███    ██▓     ▄████▄   ██▓    ▓█████ ▄▄▄      ██▀███  
@@ -41,16 +41,12 @@ function printClear() {
     
                                 ● ${client.user.tag} | Type: '${trigger}' on any chat. ●
                                                or '${trigger}' {amount}
-                                `.brightMagenta)
+    `.brightMagenta);
 }
 
-console.clear()
-process.title = `SatoriClear - Launching...`
+console.clear();
+process.title = `SatoriClear - Launching...`;
 console.log(`
-
-
-
-
                  ██▓    ▒█████   ▄▄▄     ▓█████▄   ██▓ ███▄    █  ▄████          
                 ▓██▒   ▒██▒  ██▒▒████▄   ▒██▀ ██▌▒▓██▒ ██ ▀█   █  ██▒ ▀█         
                 ▒██░   ▒██░  ██▒▒██  ▀█▄ ░██   █▌▒▒██▒▓██  ▀█ ██▒▒██░▄▄▄         
@@ -60,105 +56,159 @@ console.log(`
                 ░ ░ ▒    ░ ▒ ▒░ ░ ░   ▒▒  ░ ▒  ▒ ░ ▒ ░░ ░░   ░ ▒░ ░   ░ ░  ░  ░  
                 ░ ░  ░ ░ ░ ▒    ░   ▒   ░ ░  ░ ░ ▒ ░   ░   ░ ░  ░   ░ ░  ░  ░  
                 ░      ░ ░        ░     ░      ░           ░      ░  ░  ░  ░ 
-                                                                                `.brightMagenta)
+`.brightMagenta);
 
-async function clear(authToken, authorId, channelId, amount = Infinity) {
-    const wait = async (ms) => new Promise(done => setTimeout(done, ms))
-
-    const headers = {
-        "Authorization": authToken
-    };
-
+async function clear(authToken, authorId, channelId, amount = Infinity, paranoid = false) {
+    const wait = ms => new Promise(done => setTimeout(done, ms));
+    const headers = { "Authorization": authToken };
     let deletedMessages = 0;
+    let stop = false;
 
-    const recurse = (before) => {
-        let params = before ? `before=${before}` : ``;
-
-        request({
-            url: `https://discord.com/api/v9/channels/${channelId}/messages?${params}`,
-            headers: headers,
-            json: true
-        }, async (error, response, result) => {
-            if (response === undefined) {
-                return recurse(before);
-            }
-
-            if (response.statusCode === 202) {
-                const w = response.headers['retry-after'];
-
-                console.log(`Ops, channel non-indexed, wait ${w}ms to index the messages`.red);
-
-                await wait(w);
-
-                return recurse(before)
-            }
-
-            if (response.statusCode !== 200) {
-                console.log('Waiting for API!'.red, result);
-                return;
-            }
-
-            for (let i in result) {
-                if (deletedMessages >= amount) {
-                    console.clear()
-                    printClear()
-                    console.log(`Success! Deleted ${deletedMessages} messages.`.green);
-                    return;
+    async function fetchMessages(before) {
+        const params = before ? `before=${before}` : '';
+        return new Promise((resolve, reject) => {
+            request({
+                url: `https://discord.com/api/v9/channels/${channelId}/messages?${params}`,
+                headers,
+                json: true
+            }, (error, response, result) => {
+                if (error || !response) return reject(error || new Error("No response"));
+                if (response.statusCode === 202) {
+                    const w = response.headers['retry-after'] || 1;
+                    console.log(`Ops, channel non-indexed, wait ${w}ms to index the messages`.red);
+                    return wait(w * 1000).then(() => resolve([]));
                 }
-
-                let message = result[i];
-
-                if (message.author.id === authorId && message.type !== 3) {
-                    await new Promise((resolve) => {
-
-                        const deleteRecurse = () => {
-                            request.delete({
-                                url: `https://discord.com/api/v9/channels/${channelId}/messages/${message.id}`,
-                                headers: headers,
-                                json: true
-                            }, async (error, response, result) => {
-                                if (error) {
-                                    return deleteRecurse();
-                                }
-                                if (result) {
-                                    if (result.retry_after !== undefined) {
-                                        console.log(`Rate-limited! Waiting ${result.retry_after}ms to continue the purge.`.red)
-                                        await wait(result.retry_after * 1000);
-                                        return deleteRecurse();
-                                    }
-                                }
-
-                                deletedMessages++;
-                                resolve();
-                            });
-                        }
-
-                        deleteRecurse();
-                    });
+                if (response.statusCode !== 200) {
+                    console.log('API error!'.red, result);
+                    return reject(new Error(result?.message || "API error"));
                 }
-            }
-
-            if (result.length === 0) {
-                console.clear()
-                printClear()
-                console.log(`Success! Deleted ${deletedMessages} messages.`.green);
-            } else {
-                recurse(result[result.length - 1].id);
-            }
+                resolve(result);
+            });
         });
     }
 
-    recurse();
+    async function deleteMessage(messageId) {
+        return new Promise((resolve, reject) => {
+            request.delete({
+                url: `https://discord.com/api/v9/channels/${channelId}/messages/${messageId}`,
+                headers,
+                json: true
+            }, async (error, response, result) => {
+                if (error || !response) return reject(error || new Error("No response"));
+                if (result && result.retry_after !== undefined) {
+                    console.log(`Rate-limited! Waiting ${result.retry_after}ms to continue the purge.`.red);
+                    await wait(result.retry_after * 1000);
+                    return deleteMessage(messageId).then(resolve).catch(reject);
+                }
+                if (response.statusCode === 204) {
+                    deletedMessages++;
+                }
+                resolve();
+            });
+        });
+    }
+
+    async function purge(before) {
+        if (stop) return;
+        try {
+            const messages = await fetchMessages(before);
+            if (!messages || messages.length === 0) {
+                stop = true;
+                console.clear();
+                printClear();
+                console.log(`Success! Deleted ${deletedMessages} messages.`.green);
+                return;
+            }
+            for (const message of messages) {
+                if (deletedMessages >= amount) {
+                    stop = true;
+                    break;
+                }
+                if (message.author.id === authorId && message.type !== 3) {
+                    try {
+                        await deleteMessage(message.id);
+                        if (!paranoid) await wait(1000);
+                    } catch (e) {
+                        console.log(`Error deleting message: ${e.message}`.red);
+                    }
+                }
+            }
+            if (!stop) {
+                await purge(messages[messages.length - 1].id);
+            } else {
+                console.clear();
+                printClear();
+                console.log(`Success! Deleted ${deletedMessages} messages.`.green);
+            }
+        } catch (e) {
+            console.log(`Error: ${e.message}`.red);
+            await wait(2000);
+            await purge(before);
+        }
+    }
+
+    await purge();
+}
+
+function getChannelIdFromUrl(url) {
+    const match = url.match(/channels\/(?:\d+|@me)\/(\d+)/);
+    return match ? match[1] : null;
 }
 
 client.on('ready', async () => {
-    console.clear()
-    process.title = `SatoriClear | Running as: ${client.user.username}`
-    printClear()
-})
+    console.clear();
+    process.title = `SatoriClear | Running as: ${client.user.username}`;
+    printClear();
+
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    console.log('\nSelect mode:'.brightMagenta);
+    console.log('[1] Paranoid (Rate-Limited)'.brightMagenta);
+    console.log('[2] Normal'.brightMagenta);
+
+    rl.question('\nEnter mode number: '.brightMagenta, (modeAns) => {
+        const paranoid = modeAns.trim() === '1';
+
+        console.clear();
+        printClear();
+
+        console.log('\nSelect type:'.brightMagenta);
+        console.log('[1] Trigger Satori'.brightMagenta);
+        console.log('[2] Link Discord'.brightMagenta);
+
+        rl.question('\nEnter type number: '.brightMagenta, (typeAns) => {
+            if (typeAns.trim() === '1') {
+                console.log('\nType the trigger in any chat to start (default: satori)'.brightMagenta);
+                rl.close();
+            } else if (typeAns.trim() === '2') {
+                rl.question('\nPaste the Discord chat link: '.brightMagenta, (url) => {
+                    const channelId = getChannelIdFromUrl(url.trim());
+                    if (!channelId) {
+                        console.log('\nInvalid link. Example: https://discord.com/channels/server/channel or https://discord.com/channels/@me/channel'.brightMagenta);
+                        rl.close();
+                        return;
+                    }
+                    rl.question('\nHow many messages do you want to delete? (Enter for all): '.brightMagenta, (amountStr) => {
+                        let amount = parseInt(amountStr);
+                        if (isNaN(amount) || amount <= 0) amount = Infinity;
+                        clear(token, client.user.id, channelId, amount, paranoid);
+                        console.log(`\nStarting deletion in channel ${channelId}...`.brightMagenta);
+                        rl.close();
+                    });
+                });
+            } else {
+                console.log('\nInvalid type selection.'.brightMagenta);
+                rl.close();
+            }
+        });
+    });
+});
 
 client.on('messageCreate', async (message) => {
-    if (message.author.id != client.user.id) return;
+    if (message.author.id !== client.user.id) return;
     const args = message.content.split(' ');
     if (args[0].toLowerCase() === trigger) {
         const amount = parseInt(args[1]);
@@ -173,20 +223,21 @@ client.on('messageCreate', async (message) => {
                 console.log("Invalid amount specified.".red);
             }
         }).catch((e) => {
-            console.log(e); 
+            console.log(e);
         });
     }
 });
+
 client.on("error", (e) => {
     console.log(`Error: ${e.message}`.red);
-})
+});
 client.on("warn", (warning) => {
     console.log(`Warning: ${warning}`.yellow);
-})
+});
 
-client.login(token)
+client.login(token);
 
-rpcClient.on(`ready`, () => {
+rpcClient.on('ready', () => {
     rpcClient.request('SET_ACTIVITY', {
         pid: process.pid,
         activity: {
@@ -202,8 +253,8 @@ rpcClient.on(`ready`, () => {
                 url: "https://github.com/Wintercraxker"
             }]
         }
-    })
-})
+    });
+});
 
 rpcClient.login({
     clientId: '1215688377169485944'
