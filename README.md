@@ -28,7 +28,7 @@ Before you start, make sure you have the following components installed:
   * * *
 ```bash
 1. git clone https://github.com/wintercraxker/clear-selfbot/.git
-2. npm install request discord.js-selfbot-v13 discord-rpc colors
+2. npm install request discord.js-selfbot-v13 discord-rpc colors debug
 ```
 ## 〢 :rocket: Configuration
 Before you can use SatoriClear, you must configure your credentials in the config.json file. Follow these steps:
